@@ -3,17 +3,25 @@ import torch
 import numpy as np
 from PIL import Image
 import cv2
+import os
+import requests
 from model import ResNetUNet
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
 from io import BytesIO
 
-# -------------------------------
-# CONFIG
-# -------------------------------
+# --------------------------------
+# CONFIGURATION
+# --------------------------------
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-MODEL_PATH = "best_model_v2.pth"
-SAMPLE_IMAGE = "sample.jpg"
+
+MODEL_DIR = "models"
+MODEL_PATH = os.path.join(MODEL_DIR, "best_model_v2.pth")
+
+# 🔗 UPDATE THIS LINK WITH YOUR REAL RELEASE URL
+MODEL_URL = "https://github.com/amrutasonar665/springboard/releases/tag/model"
+
+SAMPLE_IMAGE = "sample.jpg"  # must exist in repo
 
 transform = A.Compose([
     A.Resize(256, 256),
@@ -21,26 +29,55 @@ transform = A.Compose([
     ToTensorV2(),
 ])
 
-# -------------------------------
+# --------------------------------
+# AUTO DOWNLOAD LARGE MODEL
+# --------------------------------
+def download_model_if_needed():
+    os.makedirs(MODEL_DIR, exist_ok=True)
+
+    if os.path.exists(MODEL_PATH):
+        print("✔ Model found locally, skipping download")
+        return
+
+    with st.spinner("⬇ Downloading model file... please wait (only once)"):
+        response = requests.get(MODEL_URL, stream=True)
+        total = int(response.headers.get("content-length", 0))
+        downloaded = 0
+
+        progress = st.progress(0)
+
+        with open(MODEL_PATH, "wb") as f:
+            for data in response.iter_content(chunk_size=1024):
+                if data:
+                    f.write(data)
+                    downloaded += len(data)
+                    progress.progress(min(downloaded / total, 1.0))
+
+        st.success("Model downloaded successfully!")
+
+# --------------------------------
 # LOAD MODEL
-# -------------------------------
+# --------------------------------
 @st.cache_resource
 def load_model():
+    download_model_if_needed()
+
     model = ResNetUNet()
-    model.load_state_dict(torch.load(MODEL_PATH, map_location=DEVICE))
+    state_dict = torch.load(MODEL_PATH, map_location=DEVICE)
+    model.load_state_dict(state_dict)
     model.to(DEVICE)
     model.eval()
     return model
 
 model = load_model()
 
-# -------------------------------
+# --------------------------------
 # INFERENCE FUNCTION
-# -------------------------------
+# --------------------------------
 def run_inference(img_source):
     image = Image.open(img_source).convert("RGB")
     img_np = np.array(image)
-    
+
     augmented = transform(image=img_np)
     img_tensor = augmented["image"].unsqueeze(0).to(DEVICE)
 
@@ -55,9 +92,9 @@ def run_inference(img_source):
 
     return image, result
 
-# ------------------------------------
-# Custom CSS STYLING
-# ------------------------------------
+# --------------------------------
+# CUSTOM UI CSS
+# --------------------------------
 st.markdown("""
 <style>
 body {
@@ -97,37 +134,42 @@ header {visibility:hidden;}
 </style>
 """, unsafe_allow_html=True)
 
-# ------------------------------------
-# PAGE TITLE
-# ------------------------------------
+# --------------------------------
+# TITLE
+# --------------------------------
 st.markdown("<div class='title-banner'>AI VISION EXTRACT</div>", unsafe_allow_html=True)
 st.markdown("<p class='subtitle'>Ultimate AI-Powered Background Removal & Object Isolation Tool</p>", unsafe_allow_html=True)
 
 st.write("---")
 
-# ------------------------------------
+# --------------------------------
 # SAMPLE SECTION
-# ------------------------------------
+# --------------------------------
 st.markdown("### 📌 Example Cut-Out Preview")
-sample_original, sample_output = run_inference(SAMPLE_IMAGE)
 
-colA, colB = st.columns(2)
-with colA:
-    st.markdown("<div class='image-box'>", unsafe_allow_html=True)
-    st.image(sample_original, caption="Sample Original")
-    st.markdown("</div>", unsafe_allow_html=True)
+try:
+    sample_original, sample_output = run_inference(SAMPLE_IMAGE)
+    colA, colB = st.columns(2)
 
-with colB:
-    st.markdown("<div class='image-box'>", unsafe_allow_html=True)
-    st.image(sample_output, caption="Sample Output")
-    st.markdown("</div>", unsafe_allow_html=True)
+    with colA:
+        st.markdown("<div class='image-box'>", unsafe_allow_html=True)
+        st.image(sample_original, caption="Sample Original")
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    with colB:
+        st.markdown("<div class='image-box'>", unsafe_allow_html=True)
+        st.image(sample_output, caption="Sample Output")
+        st.markdown("</div>", unsafe_allow_html=True)
+
+except:
+    st.info("⚠ Sample image not found — upload your own below.")
 
 st.write("---")
 st.markdown("## 🎯 Try It Yourself")
 
-# ------------------------------------
-# UPLOAD SECTION
-# ------------------------------------
+# --------------------------------
+# UPLOAD AREA
+# --------------------------------
 uploaded_file = st.file_uploader(
     "Upload image",
     type=["jpg", "jpeg", "png"],
@@ -150,7 +192,6 @@ if uploaded_file:
         st.image(result, caption="AI Extracted Output")
         st.markdown("</div>", unsafe_allow_html=True)
 
-    # Download button
     result_img = Image.fromarray(result)
     buffer = BytesIO()
     result_img.save(buffer, format="PNG")
