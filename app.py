@@ -209,3 +209,20 @@ else:
 
 st.write("---")
 st.markdown("<p style='text-align:center; color:#888;'>Made with ❤️ using PyTorch & Streamlit | AI Vision Extract</p>", unsafe_allow_html=True)
+#-----------------------------------------------
+ Adding  this to download while using release
+#------------------------------------------------
+import os
+import requests
+
+model_path = "best_model_v2.pth"
+download_url = "https://github.com/amrutasonar665/springboard/releases/download/model_file/best_model_v2.pth"
+
+if not os.path.exists(model_path):
+    with open(model_path, "wb") as f:
+        print("Downloading model...")
+        response = requests.get(download_url)
+        f.write(response.content)
+        print("Download complete.")
+
+
