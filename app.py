@@ -63,13 +63,11 @@ def load_model():
     download_model_if_needed()
 
     model = ResNetUNet()
-    state_dict = torch.load(MODEL_PATH, map_location=DEVICE)
+    state_dict = torch.load(MODEL_PATH, map_location=torch.device("cpu"), weights_only=True)
     model.load_state_dict(state_dict)
     model.to(DEVICE)
     model.eval()
     return model
-
-model = load_model()
 
 # --------------------------------
 # INFERENCE FUNCTION
@@ -182,3 +180,4 @@ else:
 
 st.write("---")
 st.markdown("<p style='text-align:center; color:#888;'>Made with ❤️ using PyTorch & Streamlit | AI Vision Extract</p>", unsafe_allow_html=True)
+
