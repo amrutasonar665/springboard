@@ -18,10 +18,10 @@ DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 MODEL_DIR = "models"
 MODEL_PATH = os.path.join(MODEL_DIR, "best_model_v2.pth")
 
-# 🔗 UPDATE THIS LINK WITH YOUR REAL RELEASE URL
-MODEL_URL = "https://github.com/amrutasonar665/springboard/releases/tag/model"
+# 🔗 DIRECT RELEASE DOWNLOAD URL
+MODEL_URL = "https://github.com/amrutasonar665/springboard/releases/download/model_file/best_model_v2.pth"
 
-SAMPLE_IMAGE = "sample.jpg"  # must exist in repo
+SAMPLE_IMAGE = "sample.jpg"
 
 transform = A.Compose([
     A.Resize(256, 256),
@@ -30,13 +30,13 @@ transform = A.Compose([
 ])
 
 # --------------------------------
-# AUTO DOWNLOAD LARGE MODEL
+# AUTO DOWNLOAD MODEL FROM RELEASE
 # --------------------------------
 def download_model_if_needed():
     os.makedirs(MODEL_DIR, exist_ok=True)
 
     if os.path.exists(MODEL_PATH):
-        print("✔ Model found locally, skipping download")
+        print("✔ Model already exists locally.")
         return
 
     with st.spinner("⬇ Downloading model file... please wait (only once)"):
@@ -46,11 +46,11 @@ def download_model_if_needed():
 
         progress = st.progress(0)
 
-        with open(MODEL_PATH, "wb") as f:
-            for data in response.iter_content(chunk_size=1024):
-                if data:
-                    f.write(data)
-                    downloaded += len(data)
+        with open(MODEL_PATH, "wb") as file:
+            for chunk in response.iter_content(chunk_size=1024):
+                if chunk:
+                    file.write(chunk)
+                    downloaded += len(chunk)
                     progress.progress(min(downloaded / total, 1.0))
 
         st.success("Model downloaded successfully!")
@@ -97,39 +97,18 @@ def run_inference(img_source):
 # --------------------------------
 st.markdown("""
 <style>
-body {
-    background-color: #0d0f1a;
-    color: white;
-}
-#MainMenu {visibility:hidden;}
-footer {visibility:hidden;}
-header {visibility:hidden;}
-
+body {background-color: #0d0f1a; color: white;}
+#MainMenu, footer, header {visibility:hidden;}
 .title-banner {
     background: linear-gradient(90deg, #00e6a8, #0077ff);
-    padding: 18px;
-    border-radius: 12px;
-    text-align: center;
-    font-size: 34px;
-    color: black;
-    font-weight: bold;
-    letter-spacing: 2px;
-    box-shadow: 0px 0px 15px #00e6a8;
+    padding: 18px; border-radius: 12px; text-align: center;
+    font-size: 34px; color: black; font-weight: bold;
+    letter-spacing: 2px; box-shadow: 0px 0px 15px #00e6a8;
 }
-
-.subtitle {
-    text-align:center;
-    font-size:18px;
-    color:#dcdcdc;
-    margin-top:-10px;
-}
-
+.subtitle {text-align:center; font-size:18px; color:#dcdcdc; margin-top:-10px;}
 .image-box {
-    border: 2px solid #00e6a8;
-    border-radius: 14px;
-    padding: 8px;
-    background: rgba(255,255,255,0.05);
-    box-shadow: 0px 0px 12px #00e6a8;
+    border: 2px solid #00e6a8; border-radius: 14px; padding: 8px;
+    background: rgba(255,255,255,0.05); box-shadow: 0px 0px 12px #00e6a8;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -141,12 +120,11 @@ st.markdown("<div class='title-banner'>AI VISION EXTRACT</div>", unsafe_allow_ht
 st.markdown("<p class='subtitle'>Ultimate AI-Powered Background Removal & Object Isolation Tool</p>", unsafe_allow_html=True)
 
 st.write("---")
-
-# --------------------------------
-# SAMPLE SECTION
-# --------------------------------
 st.markdown("### 📌 Example Cut-Out Preview")
 
+# --------------------------------
+# SAMPLE IMAGE DISPLAY
+# --------------------------------
 try:
     sample_original, sample_output = run_inference(SAMPLE_IMAGE)
     colA, colB = st.columns(2)
@@ -170,11 +148,7 @@ st.markdown("## 🎯 Try It Yourself")
 # --------------------------------
 # UPLOAD AREA
 # --------------------------------
-uploaded_file = st.file_uploader(
-    "Upload image",
-    type=["jpg", "jpeg", "png"],
-    label_visibility="collapsed"
-)
+uploaded_file = st.file_uploader("Upload image", type=["jpg", "jpeg", "png"], label_visibility="collapsed")
 
 if uploaded_file:
     img, result = run_inference(uploaded_file)
@@ -201,28 +175,10 @@ if uploaded_file:
         label="📥 Download Extracted Output",
         data=buffer,
         file_name="AI_Extracted_Output.png",
-        mime="image/png",
+        mime="image/png"
     )
-
 else:
     st.info("Upload an image to generate high-precision AI segmentation output.")
 
 st.write("---")
 st.markdown("<p style='text-align:center; color:#888;'>Made with ❤️ using PyTorch & Streamlit | AI Vision Extract</p>", unsafe_allow_html=True)
-#-----------------------------------------------
- Adding  this to download while using release
-#------------------------------------------------
-import os
-import requests
-
-model_path = "best_model_v2.pth"
-download_url = "https://github.com/amrutasonar665/springboard/releases/download/model_file/best_model_v2.pth"
-
-if not os.path.exists(model_path):
-    with open(model_path, "wb") as f:
-        print("Downloading model...")
-        response = requests.get(download_url)
-        f.write(response.content)
-        print("Download complete.")
-
-
